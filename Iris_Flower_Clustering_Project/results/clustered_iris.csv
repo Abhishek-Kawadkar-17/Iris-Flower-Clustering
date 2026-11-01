@@ -1,0 +1,189 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.datasets import load_iris
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
+
+# Load Iris dataset
+iris = load_iris()
+
+# Create DataFrame
+df = pd.DataFrame(
+    iris.data,
+    columns=iris.feature_names
+)
+
+# Add actual flower species for comparison only
+df["Actual Species"] = [
+    iris.target_names[i] for i in iris.target
+]
+
+# Display first five records
+print("First five records:")
+print(df.head())
+
+# Display dataset information
+print("\nDataset Shape:")
+print(df.shape)
+
+print("\nDataset Information:")
+print(df.info())
+
+print("\nMissing Values:")
+print(df.isnull().sum())
+
+# Save dataset
+df.to_csv("outputs/iris_dataset.csv", index=False)
+
+# Select only numerical features
+X = df[iris.feature_names]
+
+print("\nSelected Features:")
+print(X.head())
+
+# Apply Standard Scaling
+scaler = StandardScaler()
+
+X_scaled = scaler.fit_transform(X)
+
+print("\nScaled Data:")
+print(X_scaled[:5])
+
+# Apply K-Means Clustering
+kmeans = KMeans(
+    n_clusters=3,
+    random_state=42,
+    n_init=10
+)
+
+# Train the model
+clusters = kmeans.fit_predict(X_scaled)
+
+# Add cluster labels to dataset
+df["Cluster"] = clusters
+
+print("\nCluster Labels:")
+print(df[["Actual Species", "Cluster"]].head(10))
+
+print("\nCluster Counts:")
+print(df["Cluster"].value_counts().sort_index())
+
+score = silhouette_score(X_scaled, clusters)
+
+print("\nSilhouette Score:", score)
+
+plt.figure(figsize=(8, 6))
+
+sns.scatterplot(
+    x=X_scaled[:, 0],
+    y=X_scaled[:, 2],
+    hue=clusters,
+    palette="viridis",
+    s=80
+)
+
+plt.title("K-Means Clustering on Iris Dataset")
+plt.xlabel("Standardized Sepal Length")
+plt.ylabel("Standardized Petal Length")
+
+plt.legend(title="Cluster")
+plt.tight_layout()
+
+plt.savefig("outputs/kmeans_clusters.png")
+plt.show()
+
+wcss = []
+
+for k in range(1, 11):
+
+    model = KMeans(
+        n_clusters=k,
+        random_state=42,
+        n_init=10
+    )
+
+    model.fit(X_scaled)
+
+    wcss.append(model.inertia_)
+
+plt.figure(figsize=(8, 5))
+
+plt.plot(range(1, 11), wcss, marker="o")
+
+plt.title("Elbow Method")
+plt.xlabel("Number of Clusters (K)")
+plt.ylabel("WCSS")
+
+plt.tight_layout()
+plt.savefig("outputs/elbow_method.png")
+plt.show()
+
+# Apply PCA
+pca = PCA(n_components=2)
+
+X_pca = pca.fit_transform(X_scaled)
+
+print("\nPCA Reduced Data:")
+print(X_pca[:5])
+
+print("\nOriginal Shape:", X_scaled.shape)
+print("Reduced Shape:", X_pca.shape)
+
+print("\nExplained Variance Ratio:")
+print(pca.explained_variance_ratio_)
+
+print(
+    "\nTotal Explained Variance:",
+    sum(pca.explained_variance_ratio_) * 100,
+    "%"
+)
+
+plt.figure(figsize=(8, 6))
+
+plt.scatter(
+    X_pca[:, 0],
+    X_pca[:, 1],
+    c=clusters,
+    cmap="viridis",
+    s=80
+)
+
+plt.title("PCA Visualization of Iris Clusters")
+plt.xlabel("Principal Component 1")
+plt.ylabel("Principal Component 2")
+
+plt.colorbar(label="Cluster")
+plt.tight_layout()
+
+plt.savefig("outputs/pca_visualization.png")
+plt.show()
+
+plt.figure(figsize=(7, 5))
+
+plt.bar(
+    ["PC1", "PC2"],
+    pca.explained_variance_ratio_ * 100
+)
+
+plt.title("PCA Explained Variance")
+plt.xlabel("Principal Components")
+plt.ylabel("Variance Explained (%)")
+
+plt.tight_layout()
+plt.savefig("outputs/explained_variance.png")
+plt.show()
+
+# Save final results
+df.to_csv(
+    "results/clustered_iris.csv",
+    index=False
+)
+
+print("\nFinal Results Saved Successfully!")
+print(df.head(10))
+
